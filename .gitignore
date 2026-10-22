@@ -1,5 +1,7 @@
 node_modules/
 .next/
+next-env.d.ts
+*.tsbuildinfo
 out/
 build/
 
@@ -15,4 +17,4 @@ data/keycloakdb*
 .tide-pack/
 data/invite-links.txt
 data/store.json
-data/init.log
+data/init*.log
