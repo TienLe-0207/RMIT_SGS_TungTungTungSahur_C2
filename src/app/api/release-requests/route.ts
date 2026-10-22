@@ -44,6 +44,7 @@ export const PATCH = withAccess(isCouncil, async (req, jwt) => {
   if (typeof id !== "string" || typeof changeRequestId !== "string" || !CHANGE_REQUEST_ID.test(changeRequestId)) {
     return Response.json({ error: "Expected { id, changeRequestId, changeRequest? }" }, { status: 400 });
   }
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
   const actor = actorName(jwt);
   const result = updateStore((s): { status: number; error?: string } => {
     const r = s.releaseRequests.find((x) => x.id === id);

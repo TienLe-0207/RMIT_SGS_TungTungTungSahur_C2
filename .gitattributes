@@ -1,0 +1,3 @@
+# Tide-provided pages are pinned by hash: never let git rewrite their line endings (CRLF breaks login).
+public/tide_dpop_auth.html -text
+public/silent-check-sso.html -text

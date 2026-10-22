@@ -17,6 +17,15 @@
 
 set -euo pipefail
 
+# --- Windows (Git Bash) compatibility ---
+# Native jq.exe writes CRLF, which leaves a stray \r on every $(jq ...) value; -b keeps LF.
+# There is no sudo, and docker -v needs a Windows path with MSYS path conversion off.
+IS_WINDOWS=0
+case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) IS_WINDOWS=1 ;; esac
+if [ "$IS_WINDOWS" = 1 ]; then
+  jq() { command jq -b "$@"; }
+fi
+
 # --- Derive app-relatable defaults from package.json ---
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -199,6 +208,7 @@ mkdir -p "$PROJECT_DIR/data"
 # Docker Desktop on macOS needs neither sudo nor a uid-1000 chown for bind mounts.
 SUDO="sudo"
 [ "$(uname -s)" = "Darwin" ] && SUDO=""
+[ "$IS_WINDOWS" = 1 ] && SUDO=""
 $SUDO rm -f "$PROJECT_DIR/data/keycloakdb"* 2>/dev/null || true
 [ -n "$SUDO" ] && $SUDO chown -R 1000:1000 "$PROJECT_DIR/data"
 
@@ -221,8 +231,10 @@ case "$TIDECLOAK_IMAGE" in
          exit 1 ;;
 esac
 
-$SUDO docker run -d --name tidecloak \
-  -v "$PROJECT_DIR/data:/opt/keycloak/data/h2" \
+DATA_MOUNT="$PROJECT_DIR/data"
+[ "$IS_WINDOWS" = 1 ] && DATA_MOUNT="$(cygpath -m "$DATA_MOUNT")"
+MSYS_NO_PATHCONV=1 $SUDO docker run -d --name tidecloak \
+  -v "$DATA_MOUNT:/opt/keycloak/data/h2" \
   -p 8080:8080 \
   -e KC_BOOTSTRAP_ADMIN_USERNAME="$KC_BOOTSTRAP_ADMIN_USERNAME" \
   -e KC_BOOTSTRAP_ADMIN_PASSWORD="$KC_BOOTSTRAP_ADMIN_PASSWORD" \
