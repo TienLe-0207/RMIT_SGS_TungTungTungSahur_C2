@@ -196,8 +196,11 @@ echo "==> Cleaning previous state..."
 docker stop tidecloak 2>/dev/null || true
 docker rm tidecloak 2>/dev/null || true
 mkdir -p "$PROJECT_DIR/data"
-sudo rm -f "$PROJECT_DIR/data/keycloakdb"* 2>/dev/null || true
-sudo chown -R 1000:1000 "$PROJECT_DIR/data"
+# Docker Desktop on macOS needs neither sudo nor a uid-1000 chown for bind mounts.
+SUDO="sudo"
+[ "$(uname -s)" = "Darwin" ] && SUDO=""
+$SUDO rm -f "$PROJECT_DIR/data/keycloakdb"* 2>/dev/null || true
+[ -n "$SUDO" ] && $SUDO chown -R 1000:1000 "$PROJECT_DIR/data"
 
 if lsof -i :8080 >/dev/null 2>&1; then
   echo "ERROR: Port 8080 is already in use."
@@ -218,7 +221,7 @@ case "$TIDECLOAK_IMAGE" in
          exit 1 ;;
 esac
 
-sudo docker run -d --name tidecloak \
+$SUDO docker run -d --name tidecloak \
   -v "$PROJECT_DIR/data:/opt/keycloak/data/h2" \
   -p 8080:8080 \
   -e KC_BOOTSTRAP_ADMIN_USERNAME="$KC_BOOTSTRAP_ADMIN_USERNAME" \
@@ -255,9 +258,11 @@ fi
 
 TMP_REALM="$(mktemp)"
 cp "$REALM_TEMPLATE" "$TMP_REALM"
-sed -i "s|REALM_NAME|$REALM_NAME|g" "$TMP_REALM"
-sed -i "s|CLIENT_NAME|$CLIENT_NAME|g" "$TMP_REALM"
-sed -i "s|CLIENT_APP_URL|$CLIENT_APP_URL|g" "$TMP_REALM"
+# -i.bak works on both GNU and BSD (macOS) sed; bare -i breaks on BSD.
+sed -i.bak "s|REALM_NAME|$REALM_NAME|g" "$TMP_REALM"
+sed -i.bak "s|CLIENT_NAME|$CLIENT_NAME|g" "$TMP_REALM"
+sed -i.bak "s|CLIENT_APP_URL|$CLIENT_APP_URL|g" "$TMP_REALM"
+rm -f "$TMP_REALM.bak"
 
 TOKEN="$(get_token)"
 REALM_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$TIDECLOAK_URL/admin/realms" \
