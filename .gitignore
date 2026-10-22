@@ -17,5 +17,5 @@ data/keycloakdb*
 .tide-pack/
 data/invite-links.txt
 data/store.json
-data/init*.log
+data/*.log
 data/sim-tide.json
