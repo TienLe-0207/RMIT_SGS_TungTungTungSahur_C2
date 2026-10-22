@@ -15,3 +15,8 @@ export const COUNCIL_ROLE = "tide-realm-admin";
 export const isCouncil = (jwt: JWTPayload) => hasClientRole(jwt, COUNCIL_CLIENT, COUNCIL_ROLE);
 
 export const isOperator = (jwt: JWTPayload) => hasRealmRole(jwt, "it-operator");
+
+// The right to open the paper: both realm roles, granted together by one quorum-approved change request.
+export const RELEASE_ROLES = ["exam-releaser", "_tide_decryptor"] as const;
+
+export const hasReleaseRights = (jwt: JWTPayload) => RELEASE_ROLES.every((r) => hasRealmRole(jwt, r));

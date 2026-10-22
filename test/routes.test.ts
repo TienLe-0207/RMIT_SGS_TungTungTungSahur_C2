@@ -121,7 +121,7 @@ describe("release flow", () => {
   it("only lets a real council member link a change request", async () => {
     await as(personas.nam, ringBell, "POST", "/api/bell");
     const { request } = await (await as(personas.nam, requestRelease, "POST", "/api/release-requests")).json();
-    const body = { id: request.id, changeRequestId: "cr-0001" };
+    const body = { id: request.id, changeRequestId: "3f1c2a9e-0000-4000-8000-000000000001" };
 
     for (const u of [fakeCouncilClient, fakeCouncilRealm, personas.nam]) {
       expect((await as(u, linkChangeRequest, "PATCH", "/api/release-requests", body)).status).toBe(403);
@@ -129,6 +129,6 @@ describe("release flow", () => {
     const res = await as(personas.minh, linkChangeRequest, "PATCH", "/api/release-requests", body);
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true });
-    expect(readStore().releaseRequests[0].changeRequestIds).toEqual(["cr-0001"]);
+    expect(readStore().releaseRequests[0].changeRequestIds).toEqual(["3f1c2a9e-0000-4000-8000-000000000001"]);
   });
 });

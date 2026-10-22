@@ -28,6 +28,12 @@ export interface QuestionItem {
   status: "sealed";
 }
 
+export interface ReportedApproval {
+  username: string;
+  timestamp: string | number;
+  reportedBy: string;
+}
+
 export interface ReleaseRequest {
   id: string;
   paperId: string;
@@ -36,6 +42,13 @@ export interface ReleaseRequest {
   requesterUserId: string;
   createdAt: string;
   changeRequestIds: string[];
+  // Relayed from TideCloak by a council member's browser. The server holds no TideCloak admin
+  // credential, so it cannot re-read these: they are client-reported.
+  approvals?: ReportedApproval[];
+  threshold?: number | null;
+  changeRequestStatus?: string | null;
+  // Set only from a TideCloak-signed access token that carries the release roles.
+  grantConfirmedAt?: string | null;
 }
 
 export interface Store {
