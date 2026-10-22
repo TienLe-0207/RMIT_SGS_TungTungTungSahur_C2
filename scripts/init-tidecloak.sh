@@ -385,13 +385,41 @@ echo "==> Approving client change requests..."
 sleep 2
 approve_and_commit clients
 
+# --- Step 6b: SealedExam personas are fictional and have no email. Make email optional. ----------
+# Must run AFTER setUpTideRealm/IGA (they reset the user profile). Applies directly, no change
+# request. Never invent placeholder emails instead (AP-85).
+echo "==> Making email optional in the user profile..."
+TOKEN="$(get_token)"
+UP="$(curl -s "$TIDECLOAK_URL/admin/realms/$REALM_NAME/users/profile" -H "Authorization: Bearer $TOKEN")"
+UP_NEW="$(printf '%s' "$UP" | jq '(.attributes[] | select(.name=="email")) |= del(.required)')"
+curl -s -o /dev/null -w "    user profile update: HTTP %{http_code}\n" -X PUT "$TIDECLOAK_URL/admin/realms/$REALM_NAME/users/profile" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d "$UP_NEW"
+
 # --- Step 7: Create admin user ---
 echo "==> Creating admin user..."
 TOKEN="$(get_token)"
 curl -s -X POST "$TIDECLOAK_URL/admin/realms/$REALM_NAME/users" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"admin\",\"email\":\"$ADMIN_EMAIL\",\"firstName\":\"Admin\",\"lastName\":\"User\",\"enabled\":true,\"emailVerified\":false,\"attributes\":{\"tideInvitable\":[\"true\"]}}"
+  -d "{\"username\":\"minh\",\"firstName\":\"Minh\",\"lastName\":\"(Ministry representative)\",\"enabled\":true,\"emailVerified\":false,\"attributes\":{\"tideInvitable\":[\"true\"]}}"
+
+# SealedExam personas (all fictional, no emails). Minh above is the first admin.
+# "username|firstName|lastName"
+PERSONAS=(
+  "hoa|Hoa|(Provincial exam council)"
+  "tuan|Tuan|(Exam site head)"
+  "linh|Linh|(Question setter)"
+  "nam|Nam|(Proctor, Site A Room 12)"
+  "quang|Quang|(IT operator)"
+)
+for p in "${PERSONAS[@]}"; do
+  IFS='|' read -r P_USER P_FIRST P_LAST <<< "$p"
+  TOKEN="$(get_token)"
+  curl -s -X POST "$TIDECLOAK_URL/admin/realms/$REALM_NAME/users" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"username\":\"$P_USER\",\"firstName\":\"$P_FIRST\",\"lastName\":\"$P_LAST\",\"enabled\":true,\"emailVerified\":false,\"attributes\":{\"tideInvitable\":[\"true\"]}}"
+done
 
 # Approve user creation change request before proceeding.
 # With IGA enabled, the user is not queryable until its change request is committed.
@@ -399,32 +427,45 @@ echo "==> Approving user change requests..."
 sleep 2
 approve_and_commit users
 
-TOKEN="$(get_token)"
-USER_ID=$(curl -s "$TIDECLOAK_URL/admin/realms/$REALM_NAME/users?username=admin" \
-  -H "Authorization: Bearer $TOKEN" | jq -r '.[0].id')
+user_id() {
+  curl -s "$TIDECLOAK_URL/admin/realms/$REALM_NAME/users?username=$1&exact=true" \
+    -H "Authorization: Bearer $(get_token)" | jq -r '.[0].id'
+}
+
+USER_ID=$(user_id minh)
 
 if [ -z "$USER_ID" ] || [ "$USER_ID" = "null" ]; then
   echo "ERROR: Could not find admin user after creation. Check change-request approval."
   exit 1
 fi
 
+ALL_USERS=(minh hoa tuan linh nam quang)
+ADMIN_USERS=(minh hoa tuan)
+
 # NOTE: tide-realm-admin is granted LAST (after enrollment + signed IdP settings),
 # because committing that grant flips the realm firstAdmin -> multiAdmin. No
 # server-driven governed write may run after the flip. See Step 11b below.
 
 # --- Step 8: Generate invite link ---
-echo "==> Generating invite link..."
-TOKEN="$(get_token)"
-INVITE_LINK=$(curl -s -X POST \
-  "$TIDECLOAK_URL/admin/realms/$REALM_NAME/tideAdminResources/get-required-action-link?userId=$USER_ID&lifespan=43200" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '["link-tide-account-action"]')
+echo "==> Generating invite links..."
+mkdir -p "$PROJECT_DIR/data"
+INVITES_FILE="$PROJECT_DIR/data/invite-links.txt"
+: > "$INVITES_FILE"
+for u in "${ALL_USERS[@]}"; do
+  TOKEN="$(get_token)"
+  LINK=$(curl -s -X POST \
+    "$TIDECLOAK_URL/admin/realms/$REALM_NAME/tideAdminResources/get-required-action-link?userId=$(user_id "$u")&lifespan=43200" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '["link-tide-account-action"]')
+  echo "$u  $LINK" >> "$INVITES_FILE"
+done
 
 echo ""
 echo "============================================"
-echo "Open this link in your browser to link your admin Tide account:"
-echo "$INVITE_LINK"
+echo "Open each link in that persona's OWN Chrome profile to link a Tide account:"
+cat "$INVITES_FILE"
+echo "(also saved to $INVITES_FILE, gitignored via data/)"
 echo "============================================"
 echo ""
 
@@ -451,13 +492,15 @@ WHILE YOU ARE HERE — two things your users will see. Both are your call.
 
 BANNER
 
-echo "Waiting for admin to link Tide account (polling every 5s)..."
-while true; do
-  TOKEN="$(get_token)"
-  KEY=$(curl -s "$TIDECLOAK_URL/admin/realms/$REALM_NAME/users?username=admin" \
-    -H "Authorization: Bearer $TOKEN" | jq -r '.[0].attributes.tideUserKey[0] // empty')
-  [ -n "$KEY" ] && echo "  Account linked." && break
-  sleep 5
+echo "Waiting for all personas to link Tide accounts (polling every 5s)..."
+for u in "${ALL_USERS[@]}"; do
+  while true; do
+    TOKEN="$(get_token)"
+    KEY=$(curl -s "$TIDECLOAK_URL/admin/realms/$REALM_NAME/users?username=$u&exact=true" \
+      -H "Authorization: Bearer $TOKEN" | jq -r '.[0].attributes.tideUserKey[0] // empty')
+    [ -n "$KEY" ] && echo "  $u linked." && break
+    sleep 5
+  done
 done
 
 # --- Step 10: Approve role assignment change requests ---
@@ -465,6 +508,28 @@ echo "==> Approving role change requests..."
 sleep 2
 approve_and_commit users
 approve_and_commit roles
+
+# --- Step 10b: SealedExam app roles, assigned while still firstAdmin ---
+# Nobody gets _tide_decryptor or exam-releaser here: those are granted only by council quorum.
+assign_realm_roles() {
+  local uid roles_json
+  uid=$(user_id "$1"); shift
+  roles_json="["
+  for r in "$@"; do
+    roles_json+="$(curl -s "$TIDECLOAK_URL/admin/realms/$REALM_NAME/roles/$r" -H "Authorization: Bearer $(get_token)"),"
+  done
+  roles_json="${roles_json%,}]"
+  curl -s -o /dev/null -w "    $uid <- $* : %{http_code}\n" -X POST \
+    "$TIDECLOAK_URL/admin/realms/$REALM_NAME/users/$uid/role-mappings/realm" \
+    -H "Authorization: Bearer $(get_token)" -H "Content-Type: application/json" -d "$roles_json"
+}
+echo "==> Assigning SealedExam app roles..."
+assign_realm_roles linh exam-setter _tide_encryptor
+assign_realm_roles nam proctor
+assign_realm_roles quang it-operator
+sleep 2
+approve_and_commit roles
+approve_and_commit users
 
 # --- Step 11: Point the tide IdP at this realm's console origin, then sign it ---
 # CustomAdminUIDomain must be the TideCloak console origin for THIS realm, not
@@ -502,11 +567,15 @@ if echo "$ROLE_JSON" | jq -e '.error' > /dev/null 2>&1; then
   exit 1
 fi
 
-TOKEN="$(get_token)"
-curl -s -X POST "$TIDECLOAK_URL/admin/realms/$REALM_NAME/users/$USER_ID/role-mappings/clients/$RM_UUID" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d "[$ROLE_JSON]" > /dev/null
+# Council: three admins, so the IGA threshold max(1, floor(0.7*3)) = 2.
+for u in "${ADMIN_USERS[@]}"; do
+  TOKEN="$(get_token)"
+  curl -s -o /dev/null -w "    $u <- tide-realm-admin : %{http_code}\n" -X POST \
+    "$TIDECLOAK_URL/admin/realms/$REALM_NAME/users/$(user_id "$u")/role-mappings/clients/$RM_UUID" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "[$ROLE_JSON]"
+done
 
 # Final drain: commits GRANT_ROLES and flips firstAdmin -> multiAdmin.
 # No governed write may run after this point.
