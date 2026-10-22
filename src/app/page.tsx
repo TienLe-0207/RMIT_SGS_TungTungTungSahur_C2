@@ -18,23 +18,30 @@ export default function HomePage() {
     return (
       <>
         <div className="hero">
-          <div className="seal-mark" style={{ width: 72, height: 72, fontSize: 32, margin: "0 auto 18px" }}>✦</div>
-          <h1>SealedExam</h1>
+          <h1>Deliver and open sealed exam papers</h1>
           <p className="tagline">Nobody can leak the exam alone, because nobody holds the key alone.</p>
           <p className="lead">
-            National exam papers travel to exam sites early and encrypted. Not the ministry, not the IT operator, not this
-            platform can open one before the bell. Opening takes a council quorum, enforced by the Tide network.
+            Exam papers travel to exam sites early and encrypted. The ministry, the IT operator and this platform cannot
+            open one before the bell. Opening takes a council quorum, enforced by the Tide network.
           </p>
-          <Button variant="primary" big onClick={() => tc.login()}>Sign in with Tide</Button>
+          <Button variant="primary" big onClick={() => tc.login()}>Start now ▸</Button>
         </div>
-        <div className="grid three">
-          <Card title="Sealed in the browser" sub="Setters encrypt questions before they leave the device. The server stores ciphertext only." />
-          <Card title="Opened only by quorum" sub="The release role is granted only when 2 of 3 council members sign. Nobody can grant it to themselves." />
-          <Card title="Every step on the record" sub="Requests, approvals, refusals and openings are logged with who and when." />
+
+        <div className="grid two">
+          <Card title="How it works">
+            <ol style={{ paddingLeft: 20, margin: 0 }}>
+              <li style={{ marginBottom: 8 }}><strong>Setters seal questions</strong> in their own browser. The server only ever stores ciphertext.</li>
+              <li style={{ marginBottom: 8 }}><strong>At the exam bell</strong>, the proctor asks the council to release the paper.</li>
+              <li style={{ marginBottom: 8 }}><strong>Council members approve</strong> by signing. One member alone cannot grant release, not even to themselves.</li>
+              <li><strong>The proctor opens the paper</strong> once the quorum is met. Every step goes on the audit trail.</li>
+            </ol>
+          </Card>
+          <Card title="Before you start">
+            <p>You need a SealedExam role: question setter, council member, proctor or IT operator.</p>
+            <p>Each person signs in with Tide in their own browser profile.</p>
+            <p className="small muted" style={{ margin: 0 }}>All people, exams and questions in this prototype are fictional.</p>
+          </Card>
         </div>
-        <p className="muted small" style={{ textAlign: "center", marginTop: 24 }}>
-          Prototype. All people, exams and questions are fictional.
-        </p>
       </>
     );
   }

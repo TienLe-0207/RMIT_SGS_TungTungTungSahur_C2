@@ -2,6 +2,20 @@
 
 Hướng dẫn này dùng khi chạy lại từ đầu, ví dụ khi chuyển sang máy khác vì máy cũ hết RAM.
 
+## Cách nhanh: TideCloak giả lập (mặc định)
+
+Không cần Docker, không cần licence Tide. Đăng nhập, role, quorum của council và các kiểm tra của mạng Tide
+đều do `/sim-tide` giả lập. Các API của app vẫn kiểm JWT, role và DPoP y như khi chạy thật.
+
+```bash
+npm install
+npm run sim:init     # tạo realm giả lập + 6 persona, xoá dữ liệu demo cũ
+npm run dev          # http://localhost:3000, rồi bấm "Sign in with Tide" để chọn persona
+npm run e2e:sim      # (terminal khác) chạy cả kịch bản F1–F9 qua HTTP; chạy lại sim:init trước mỗi lần
+```
+
+Muốn dùng TideCloak thật thì đặt `NEXT_PUBLIC_TIDE_MODE=live` và làm theo các bước dưới.
+
 ## 0. Yêu cầu máy
 
 | Thứ | Ghi chú |
@@ -91,6 +105,7 @@ Khi một persona vừa được cấp hoặc bị thu role, persona đó phải
 | `Port 8080 is already in use` / container không lên | `docker rm -f tidecloak`, tắt app khác đang dùng cổng 8080, rồi chạy lại bước 4. |
 | `TideCloak did not start within 120 seconds` | Thường do thiếu RAM. Xem `docker logs tidecloak`, tắt bớt container hoặc ứng dụng, tăng RAM cho Docker, chạy lại. |
 | `STOP: the Tide realm was NOT set up` (exit 2) | `.env` thiếu `TIDE_LICENSE_EMAIL` hoặc `TIDE_TERMS_ACCEPTED=yes`. |
+| `TIDE-IDPEXT-VENDOR-KEYGEN_FAILED` và log có `[Midgard] FinalizeWallet failed` (503/500, "Not enough orks returned an ok response") | Mạng ORK của Tide đang lỗi hoặc quá tải. Không phải lỗi của máy hay code. Đợi rồi chạy lại bước 4. Nếu lỗi kéo dài, báo team Tide kèm log Midgard. |
 | `TIDE-IDPEXT-VENDOR-STRIPE_CHECKOUT_FAILED` sau khoảng 100 giây | Tên lỗi gây hiểu nhầm. Lỗi thật ở `docker logs tidecloak \| grep Midgard`: `InitializeWallet ... Timeout of 100 seconds`, tức mạng Tide/licence không trả lời. Kiểm tra ORK: `curl -sI https://ork1.tideprotocol.com`. Nếu ORK vẫn trả 200, đợi một lúc rồi chạy lại bước 4. Nếu lỗi kéo dài, báo team Tide (Discord https://discord.gg/XBMd9ny2q5 hoặc info@tide.org) kèm đoạn log Midgard. |
 | `setUpTideRealm ... NEED_PAYMENT / 303` | Licence không cấp được. Kiểm tra email licence và kết nối internet. |
 | Link mời hết hạn | Chạy lại bước 4 (reset realm), hoặc nhờ agent tạo link mới. |

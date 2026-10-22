@@ -164,7 +164,7 @@ function Room() {
         </div>
       ) : (
         <div className="sealed-envelope">
-          <div className="seal-mark">✦</div>
+          <div className="seal-mark">SEALED</div>
           <h3>Sealed</h3>
           <p className="muted">{sealedCount} encrypted question(s) on this site. No key exists here or on the server.</p>
         </div>
