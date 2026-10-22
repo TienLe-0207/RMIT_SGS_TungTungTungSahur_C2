@@ -1,6 +1,6 @@
 "use client";
 
-import { useTideCloak } from "@tidecloak/nextjs";
+import { useTide as useTideCloak } from "@/lib/tide/useTide";
 import { useEffect, useState } from "react";
 
 // Playbook: add-rbac-nextjs

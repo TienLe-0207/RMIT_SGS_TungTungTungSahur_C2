@@ -227,3 +227,10 @@ pre.raw {
   .paper .opts { grid-template-columns: 1fr; }
   .hero h1 { font-size: 32px; }
 }
+
+/* Simulated Tide enclave (see src/lib/tide/sim/client.tsx) */
+.enclave-backdrop { position: fixed; inset: 0; background: rgba(5, 9, 20, 0.72); display: grid; place-items: center; z-index: 50; padding: 16px; }
+.enclave { width: min(440px, 100%); background: var(--panel); border: 1px solid var(--gold); border-radius: var(--radius); padding: 22px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
+.enclave-head { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+.enclave ul { padding-left: 18px; margin: 8px 0 18px; }
+.sim-flag { font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--gold); border: 1px dashed var(--gold); border-radius: 999px; padding: 2px 8px; }

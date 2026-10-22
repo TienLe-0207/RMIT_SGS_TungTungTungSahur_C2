@@ -1,6 +1,6 @@
 "use client";
 
-import { useTideCloak } from "@tidecloak/nextjs";
+import { useTide as useTideCloak } from "@/lib/tide/useTide";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AuditEvent, QuestionItem, ReleaseRequest, Store } from "@/lib/store";
 

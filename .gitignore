@@ -18,3 +18,4 @@ data/keycloakdb*
 data/invite-links.txt
 data/store.json
 data/init*.log
+data/sim-tide.json

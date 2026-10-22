@@ -9,6 +9,8 @@ import {
 } from "@/lib/tide/iga";
 import { signRelationshipPolicy } from "@/lib/tide/relationship";
 import { openQuestions } from "@/lib/tide/paper";
+import { SIMULATED } from "@/lib/tide/mode";
+import { simSignRelationshipPolicy } from "@/lib/tide/sim/client";
 
 export default function CouncilPage() {
   return (
@@ -99,16 +101,14 @@ function Council() {
   const signPolicy = (kind: "write" | "read") =>
     run(`policy-${kind}`, async () => {
       if (!paper) return;
-      const adminPolicy = await fetchAdminPolicy(sf);
-      const signed = await signRelationshipPolicy(
-        {
-          vendorId: vendorId() || tc.getVendorId(),
-          subject: { type: "Role", id: kind === "write" ? "exam-setter" : "exam-releaser" },
-          recordId: paper.paper.id,
-          access: kind,
-        },
-        adminPolicy
-      ).catch((err) => { throw new Error(explainTideError(err).message); });
+      const grant = {
+        vendorId: vendorId() || tc.getVendorId(),
+        subject: { type: "Role" as const, id: kind === "write" ? "exam-setter" : "exam-releaser" },
+        recordId: paper.paper.id,
+        access: kind,
+      };
+      const signed = await (SIMULATED ? simSignRelationshipPolicy(grant) : signRelationshipPolicy(grant, await fetchAdminPolicy(sf)))
+        .catch((err) => { throw new Error(explainTideError(err).message); });
       await api("/api/policies", { method: "POST", body: { kind, policy: signed } });
       setFlash({ tone: "ok", title: `${kind === "write" ? "Write" : "Read"} policy signed by the Tide network.` });
       await loadApp();
