@@ -191,7 +191,7 @@ export function SimTideProvider({ children }: { children: ReactNode }) {
         <div className="enclave-backdrop" role="dialog" aria-modal="true">
           <div className="enclave">
             <div className="enclave-head">
-              <span className="seal-mark">✦</span>
+              <span className="seal-mark">✎</span>
               <div>
                 <strong>Tide enclave</strong>
                 <div className="small muted">Simulated for this prototype</div>

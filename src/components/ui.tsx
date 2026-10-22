@@ -79,6 +79,20 @@ export function Stepper({ steps }: { steps: { label: string; state: StepState; n
   );
 }
 
+// The service's own mark: a sealed paper inside a stamp ring. Deliberately not a state emblem.
+export function Emblem({ size = 52 }: { size?: number }) {
+  return (
+    <svg className="emblem" width={size} height={size} viewBox="0 0 52 52" role="img" aria-label="SealedExam emblem">
+      <circle cx="26" cy="26" r="24" fill="#fff" stroke="#1d3f73" strokeWidth="3" />
+      <circle cx="26" cy="26" r="19" fill="none" stroke="#1d3f73" strokeWidth="1" />
+      <rect x="16" y="13" width="20" height="25" fill="#fff" stroke="#0b0c0c" strokeWidth="1.6" />
+      <path d="M19 19h14M19 23h14M19 27h9" stroke="#0b0c0c" strokeWidth="1.4" />
+      <circle cx="32" cy="34" r="6" fill="#b3261e" />
+      <path d="M29.5 34l1.8 1.8 3.4-3.6" fill="none" stroke="#fff" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
 export function PersonaChip({ username, showTitle = true }: { username: string; showTitle?: boolean }) {
   const p = persona(username);
   return (
@@ -86,7 +100,7 @@ export function PersonaChip({ username, showTitle = true }: { username: string; 
       <span className="dot" style={{ background: p.color }}>{p.name.slice(0, 1)}</span>
       <span>
         {p.name}
-        {showTitle && p.title && <small> · {p.title}</small>}
+        {showTitle && p.title && <small> ({p.title})</small>}
       </span>
     </span>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Card, Notice, PersonaChip } from "@/components/ui";
+import { Button, Notice, PageHead, PersonaChip } from "@/components/ui";
 import { simSignIn } from "@/lib/tide/sim/client";
 
 // SIMULATED Tide sign-in. Stands in for Tide's passwordless login: choosing a persona here plays the
@@ -33,18 +33,25 @@ export default function SimLoginPage() {
   };
 
   return (
-    <div className="stack" style={{ maxWidth: 640, margin: "0 auto" }}>
-      <Card title="Sign in with Tide" sub="Simulated TideCloak sign-in for this prototype. Each browser tab holds one persona.">
-        <div className="stack">
+    <div className="stack" style={{ maxWidth: 720 }}>
+      <PageHead title="Sign in with Tide">
+        Simulated TideCloak sign-in for this prototype. Choose the account to act as. Use one browser profile per person.
+      </PageHead>
+      <table className="align-middle">
+        <thead>
+          <tr><th>Account</th><th style={{ width: 1 }}><span className="sr-only">Action</span></th></tr>
+        </thead>
+        <tbody>
           {users.map((u) => (
-            <div key={u.username} className="row">
-              <PersonaChip username={u.username} />
-              <span className="spacer" />
-              <Button variant="primary" busy={busy === u.username} onClick={() => signIn(u.username)}>Sign in</Button>
-            </div>
+            <tr key={u.username}>
+              <td><PersonaChip username={u.username} /></td>
+              <td>
+                <Button variant="primary" busy={busy === u.username} onClick={() => signIn(u.username)}>Sign in</Button>
+              </td>
+            </tr>
           ))}
-        </div>
-      </Card>
+        </tbody>
+      </table>
       {error && <Notice tone="danger" title="Could not sign in">{error}. Run `npm run sim:init`, then restart `npm run dev`.</Notice>}
       <p className="small muted">All people are fictional.</p>
     </div>
