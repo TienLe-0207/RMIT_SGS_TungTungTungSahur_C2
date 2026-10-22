@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Badge, Button, Card, Gate, Notice, PageHead, Stepper, time, type StepState } from "@/components/ui";
-import { useAction, useApi, useMe, usePoll, type PaperView, type ReleaseRequest } from "@/lib/client/hooks";
+import { ApiError, releaseProgress, useAction, useApi, useMe, usePoll, type PaperView, type ReleaseRequest } from "@/lib/client/hooks";
 import type { Question } from "@/lib/samplePaper";
 import { openQuestions } from "@/lib/tide/paper";
 import { explainTideError } from "@/lib/tide/iga";
@@ -31,6 +31,7 @@ function Room() {
   const [openedAt, setOpenedAt] = useState<number | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
   const [refreshedAt, setRefreshedAt] = useState<number | null>(null);
+  const [confirmNote, setConfirmNote] = useState<string | null>(null);
 
   const load = async () => {
     const [p, r] = await Promise.all([
@@ -43,16 +44,26 @@ function Room() {
   usePoll(load, 4000);
 
   const mine = [...requests].reverse().find((r) => r.requester === username);
-  const progress = mine?.progress;
+  const progress = releaseProgress(mine);
   const bell = paper?.paper.bellRungAt;
   const sealedCount = paper?.questions.length ?? 0;
 
   const ringBell = () => run("bell", async () => { await api("/api/bell", { method: "POST" }); await load(); });
   const requestRelease = () => run("request", async () => { await api("/api/release-requests", { method: "POST" }); await load(); });
+  // After the refresh, hand the new token to the server: it records the grant as TideCloak-confirmed
+  // only if the token itself carries the release roles. 409 just means the quorum has not committed yet.
   const refresh = () =>
     run("refresh", async () => {
       await tc.forceRefreshToken();
       setRefreshedAt(Date.now());
+      try {
+        await api("/api/release-requests/confirm", { method: "POST" });
+        setConfirmNote(null);
+      } catch (err) {
+        if (!(err instanceof ApiError && err.status === 409)) throw err;
+        setConfirmNote("Not in your token yet. TideCloak can take up to two minutes after the quorum signs.");
+      }
+      await load();
     });
   const open = () =>
     run("open", async () => {
@@ -70,11 +81,7 @@ function Room() {
       }
     });
 
-  const approvals =
-    progress?.committed ? "approved"
-    : progress && progress.authCount != null ? `${progress.authCount} of ${progress.threshold ?? "?"}`
-    : mine?.changeRequestIds.length ? "filed"
-    : null;
+  const approvals = progress?.label ?? null;
 
   const st = (done: boolean, active: boolean): StepState => (done ? "done" : active ? "active" : "todo");
   const steps = [
@@ -111,7 +118,8 @@ function Room() {
           {mine && (
             <p className="small muted" style={{ marginTop: 10 }}>
               Council progress: <strong>{approvals ?? "waiting for a council member to file the grant"}</strong>
-              {progress && <> · last seen {time(progress.at)} by {progress.reportedBy} (client-reported)</>}
+              {progress?.approvals.length ? <> · signed by {progress.approvals.map((a) => a.username).join(", ")} (client-reported)</> : null}
+              {mine.grantConfirmedAt && <> · confirmed from your TideCloak token at {time(mine.grantConfirmedAt)}</>}
             </p>
           )}
         </Card>
@@ -122,6 +130,7 @@ function Room() {
             <Badge tone={roles.releaser ? "ok" : undefined}>{roles.releaser ? "exam-releaser in token" : "no exam-releaser yet"}</Badge>
           </div>
           {refreshedAt && <p className="small muted" style={{ marginTop: 8 }}>Refreshed at {time(refreshedAt)}</p>}
+          {confirmNote && <p className="small muted" style={{ marginTop: 4 }}>{confirmNote}</p>}
         </Card>
 
         <Card title="4. Open the paper" sub="Decrypts in this browser. The Tide network checks your roles on every request. You can try at any time.">

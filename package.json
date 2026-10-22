@@ -7,7 +7,9 @@
     "build": "next build --webpack",
     "start": "next start",
     "init": "bash scripts/init-tidecloak.sh",
-    "reset": "node scripts/reset-demo.mjs"
+    "reset": "node scripts/reset-demo.mjs",
+    "sim:init": "node scripts/sim-init.mjs",
+    "test": "vitest run"
   },
   "dependencies": {
     "@tidecloak/nextjs": "0.14.17",
@@ -19,6 +21,7 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^3.2.4"
   }
 }

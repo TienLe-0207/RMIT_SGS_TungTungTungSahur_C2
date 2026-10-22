@@ -1,6 +1,6 @@
 "use client";
 
-import { useTideCloak } from "@tidecloak/nextjs";
+import { useTide as useTideCloak } from "@/lib/tide/useTide";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AuditEvent, QuestionItem, ReleaseRequest, Store } from "@/lib/store";
 
@@ -61,6 +61,25 @@ export function useApi() {
     },
     [secureFetch]
   );
+}
+
+/**
+ * Where a release request stands, from what the server holds. `confirmed` comes from the proctor's
+ * TideCloak-signed token; the approval count is relayed by council browsers (client-reported).
+ */
+export function releaseProgress(rr: ReleaseRequest | undefined) {
+  if (!rr) return null;
+  const approvals = rr.approvals ?? [];
+  const confirmed = !!rr.grantConfirmedAt;
+  const committed = confirmed || rr.changeRequestStatus === "APPROVED";
+  const label = committed
+    ? "approved"
+    : approvals.length || rr.threshold != null
+      ? `${approvals.length} of ${rr.threshold ?? "?"}`
+      : rr.changeRequestIds.length
+        ? "filed"
+        : null;
+  return { approvals, threshold: rr.threshold ?? null, committed, confirmed, label };
 }
 
 /** Run `fn` now and every `ms` while the tab is visible. */

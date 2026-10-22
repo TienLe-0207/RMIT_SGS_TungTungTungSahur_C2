@@ -595,6 +595,26 @@ echo "==> Final drain (commit grant + firstAdmin -> multiAdmin flip)..."
 sleep 2
 approve_and_commit roles
 
+# --- Step 11c: Verify the council (read-only) ----------------------------------------------------
+# Granting three admins at once is not verified end to end: the first commit flips the realm to
+# multiAdmin, after which the other grants may need an enclave approval. Report instead of guessing.
+echo "==> Verifying the council..."
+for u in "${ADMIN_USERS[@]}"; do
+  HAS=$(curl -s "$TIDECLOAK_URL/admin/realms/$REALM_NAME/users/$(user_id "$u")/role-mappings/clients/$RM_UUID" \
+    -H "Authorization: Bearer $(get_token)" | jq -r '[.[]?.name] | index("tide-realm-admin") != null')
+  echo "    $u tide-realm-admin: $HAS"
+done
+STILL_PENDING=$(curl -s "$TIDECLOAK_URL/admin/realms/$REALM_NAME/iga/change-requests?status=PENDING" \
+  -H "Authorization: Bearer $(get_token)" \
+  | jq -r 'if type=="array" then .[] | "    PENDING \(.actionType) \(.id[0:8]) \(.authorizationCount // 0)/\(.threshold // "?")" else empty end')
+if [ -n "$STILL_PENDING" ]; then
+  echo "$STILL_PENDING"
+  echo "    Approve these in the admin console ($TIDECLOAK_URL/admin/$REALM_NAME/console/ -> Change Requests)"
+  echo "    signed in as minh, before relying on a 2-of-3 council."
+else
+  echo "    No pending change requests."
+fi
+
 # --- Step 12: Export adapter JSON ---
 # --- Default enclave branding (logo + background) -------------------------------------------
 # Generated locally — no image model needed — then uploaded and SIGNED. Branding is IGA-exempt

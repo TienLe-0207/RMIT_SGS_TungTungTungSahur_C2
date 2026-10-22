@@ -2,13 +2,15 @@
 
 import { useRef, useState } from "react";
 import { Badge, Button, Card, Gate, Notice, PageHead, PersonaChip, time } from "@/components/ui";
-import { useAction, useApi, useMe, usePoll, type PaperView, type ReleaseRequest } from "@/lib/client/hooks";
+import { releaseProgress, useAction, useApi, useMe, usePoll, type PaperView, type ReleaseRequest } from "@/lib/client/hooks";
 import {
-  approveChangeRequest, denyChangeRequest, explainTideError, fetchAdminPolicy, listChangeRequests,
+  approveChangeRequest, denyChangeRequest, explainTideError, fetchAdminPolicy, findChangeRequest, listChangeRequests,
   requestReleaseGrant, requestReleaseRevoke, userName, vendorId, type ChangeRequest,
 } from "@/lib/tide/iga";
 import { signRelationshipPolicy } from "@/lib/tide/relationship";
 import { openQuestions } from "@/lib/tide/paper";
+import { SIMULATED } from "@/lib/tide/mode";
+import { simSignRelationshipPolicy } from "@/lib/tide/sim/client";
 
 export default function CouncilPage() {
   return (
@@ -82,24 +84,31 @@ function Council() {
   };
   const releaseFor = (crId: string) => requests.find((r) => r.changeRequestIds.includes(crId));
 
-  const reportProgress = async (rr: ReleaseRequest, crId: string, p: { authCount: number | null; threshold: number | null; committed: boolean }) => {
-    await api("/api/release-requests", { method: "PATCH", body: { id: rr.id, changeRequestId: crId, progress: p } });
+  // Relay the change request as TideCloak shows it to this browser (status, threshold, authorizers[]).
+  // The server checks it is a role grant for this proctor. Best effort: the decisive record is the
+  // proctor's own token (/api/release-requests/confirm), so a refusal here only shows a warning.
+  const reportSnapshot = async (rr: ReleaseRequest, crId: string) => {
+    try {
+      const cr = await findChangeRequest(sf, crId);
+      if (!cr) return;
+      await api("/api/release-requests", { method: "PATCH", body: { id: rr.id, changeRequestId: crId, changeRequest: cr } });
+    } catch (err) {
+      setFlash({ tone: "warn", title: "Approval saved in TideCloak, but the app could not record its progress.", text: err instanceof Error ? err.message : String(err) });
+    }
   };
 
   // ---- actions ----
   const signPolicy = (kind: "write" | "read") =>
     run(`policy-${kind}`, async () => {
       if (!paper) return;
-      const adminPolicy = await fetchAdminPolicy(sf);
-      const signed = await signRelationshipPolicy(
-        {
-          vendorId: vendorId() || tc.getVendorId(),
-          subject: { type: "Role", id: kind === "write" ? "exam-setter" : "exam-releaser" },
-          recordId: paper.paper.id,
-          access: kind,
-        },
-        adminPolicy
-      ).catch((err) => { throw new Error(explainTideError(err).message); });
+      const grant = {
+        vendorId: vendorId() || tc.getVendorId(),
+        subject: { type: "Role" as const, id: kind === "write" ? "exam-setter" : "exam-releaser" },
+        recordId: paper.paper.id,
+        access: kind,
+      };
+      const signed = await (SIMULATED ? simSignRelationshipPolicy(grant) : signRelationshipPolicy(grant, await fetchAdminPolicy(sf)))
+        .catch((err) => { throw new Error(explainTideError(err).message); });
       await api("/api/policies", { method: "POST", body: { kind, policy: signed } });
       setFlash({ tone: "ok", title: `${kind === "write" ? "Write" : "Read"} policy signed by the Tide network.` });
       await loadApp();
@@ -109,9 +118,11 @@ function Council() {
     run(`file-${rr.id}`, async () => {
       const { changeRequestId } = await requestReleaseGrant(sf, rr.requesterUserId);
       if (!changeRequestId) throw new Error("TideCloak accepted the request but no change request id came back. Check the list below.");
+      // Link first, without a snapshot, so the release request is tied to its change request even if
+      // the snapshot check below refuses what this browser read.
+      await api("/api/release-requests", { method: "PATCH", body: { id: rr.id, changeRequestId } });
+      await reportSnapshot(rr, changeRequestId);
       const list = await listChangeRequests(sf);
-      const cr = list.find((c) => c.id === changeRequestId);
-      await reportProgress(rr, changeRequestId, { authCount: cr ? approvalsOf(cr) : null, threshold: cr?.threshold ?? null, committed: false });
       setFlash({ tone: "info", title: `Change request filed for ${rr.requester}.`, text: "Filing counts as your approval. Another council member must sign before it takes effect." });
       setCrs(list);
       await loadApp();
@@ -128,7 +139,7 @@ function Council() {
         body: { action: "approval_signed", details: `Signed ${cr.actionType} for ${target} (CR ${cr.id.slice(0, 8)}): ${res.committed ? "quorum met, committed" : `${count ?? "?"} of ${threshold ?? "?"}`}` },
       });
       const rr = releaseFor(cr.id);
-      if (rr) await reportProgress(rr, cr.id, { authCount: count, threshold, committed: !!res.committed });
+      if (rr) await reportSnapshot(rr, cr.id);
       setFlash(
         res.committed
           ? { tone: "ok", title: "Quorum met. The change is committed.", text: `${target} gets the role after refreshing their session.` }
@@ -199,10 +210,12 @@ function Council() {
                   <td className="small">{rr.site}</td>
                   <td className="mono">{time(rr.createdAt)}</td>
                   <td>
-                    {rr.progress?.committed ? <Badge tone="ok">approved</Badge>
-                      : rr.progress?.authCount != null ? <Badge tone="warn">{rr.progress.authCount} of {rr.progress.threshold ?? "?"}</Badge>
-                      : rr.changeRequestIds.length ? <Badge tone="warn">filed</Badge>
-                      : <Badge>not filed</Badge>}
+                    {(() => {
+                      const p = releaseProgress(rr);
+                      if (p?.confirmed) return <Badge tone="ok">granted</Badge>;
+                      if (p?.committed) return <Badge tone="ok">approved</Badge>;
+                      return p?.label ? <Badge tone="warn">{p.label}</Badge> : <Badge>not filed</Badge>;
+                    })()}
                   </td>
                   <td style={{ textAlign: "right" }}>
                     {rr.changeRequestIds.length === 0 && (
