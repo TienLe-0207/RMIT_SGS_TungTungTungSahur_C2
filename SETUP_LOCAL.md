@@ -91,6 +91,7 @@ Khi một persona vừa được cấp hoặc bị thu role, persona đó phải
 | `Port 8080 is already in use` / container không lên | `docker rm -f tidecloak`, tắt app khác đang dùng cổng 8080, rồi chạy lại bước 4. |
 | `TideCloak did not start within 120 seconds` | Thường do thiếu RAM. Xem `docker logs tidecloak`, tắt bớt container hoặc ứng dụng, tăng RAM cho Docker, chạy lại. |
 | `STOP: the Tide realm was NOT set up` (exit 2) | `.env` thiếu `TIDE_LICENSE_EMAIL` hoặc `TIDE_TERMS_ACCEPTED=yes`. |
+| `TIDE-IDPEXT-VENDOR-KEYGEN_FAILED` và log có `[Midgard] FinalizeWallet failed` (503/500, "Not enough orks returned an ok response") | Mạng ORK của Tide đang lỗi hoặc quá tải. Không phải lỗi của máy hay code. Đợi rồi chạy lại bước 4. Nếu lỗi kéo dài, báo team Tide kèm log Midgard. |
 | `TIDE-IDPEXT-VENDOR-STRIPE_CHECKOUT_FAILED` sau khoảng 100 giây | Tên lỗi gây hiểu nhầm. Lỗi thật ở `docker logs tidecloak \| grep Midgard`: `InitializeWallet ... Timeout of 100 seconds`, tức mạng Tide/licence không trả lời. Kiểm tra ORK: `curl -sI https://ork1.tideprotocol.com`. Nếu ORK vẫn trả 200, đợi một lúc rồi chạy lại bước 4. Nếu lỗi kéo dài, báo team Tide (Discord https://discord.gg/XBMd9ny2q5 hoặc info@tide.org) kèm đoạn log Midgard. |
 | `setUpTideRealm ... NEED_PAYMENT / 303` | Licence không cấp được. Kiểm tra email licence và kết nối internet. |
 | Link mời hết hạn | Chạy lại bước 4 (reset realm), hoặc nhờ agent tạo link mới. |
