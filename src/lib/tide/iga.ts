@@ -56,6 +56,15 @@ export async function listChangeRequests(sf: SecureFetch, status = "PENDING"): P
   return Array.isArray(out) ? out : [];
 }
 
+/** One change request by id. Once the quorum commits it, it leaves PENDING, so look in APPROVED too. */
+export async function findChangeRequest(sf: SecureFetch, id: string): Promise<ChangeRequest | null> {
+  for (const status of ["PENDING", "APPROVED"]) {
+    const cr = (await listChangeRequests(sf, status)).find((c) => c.id === id);
+    if (cr) return cr;
+  }
+  return null;
+}
+
 async function realmRole(sf: SecureFetch, name: string) {
   return json<any>(await call(sf, `${base()}/roles/${encodeURIComponent(name)}`));
 }

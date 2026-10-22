@@ -13,6 +13,8 @@ const LABELS: Record<string, { text: string; tone?: "ok" | "warn" | "danger" | "
   release_requested: { text: "Requested release", tone: "warn" },
   role_grant_filed: { text: "Filed role grant", tone: "info" },
   approval_signed: { text: "Signed approval", tone: "ok" },
+  approval_recorded: { text: "Approval in TideCloak", tone: "ok" },
+  release_granted: { text: "Release role in token", tone: "ok" },
   self_grant_attempt: { text: "Self-grant attempt", tone: "danger" },
   decrypt_denied: { text: "Decrypt refused", tone: "danger" },
   paper_decrypted: { text: "Opened the paper", tone: "ok" },
