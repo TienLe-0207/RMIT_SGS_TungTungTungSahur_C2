@@ -7,10 +7,10 @@ SealedExam delivers national exam papers to exam sites days early, encrypted so 
 Built with [TideCloak](https://tide.org/tidecloak?utm_source=github&utm_medium=readme&utm_campaign=unlocked).
 
 ### 1. Vision & originality
-A digital chain of custody for high-stakes national exams. Papers travel early as ciphertext; the authority to open one only emerges at exam time, when independent council members approve. No official, admin or vendor holds it alone.
+A digital chain of custody for high-stakes national exams. Papers travel early as ciphertext; the authority to open one only emerges at exam time, when independent council members approve.
 
 ### 2. Trust constraint insight
-Exam security relies on a costly chain of trusted people: quarantined setters, police escorts, sealed envelopes. Going digital only moves the master key to a database admin or cloud vendor, so computer-based national exams stay hard to trust. Without a master key, papers can travel digitally and early.
+Exam security rests on trusted insiders, and insiders fail. India's 2024 medical entrance exam [leaked before exam day](https://www.livelaw.in/amp/top-stories/supreme-court-plea-for-cbi-investigation-neet-ug-2024-paper-leak-notice-issued-260490), with 2.4 million candidates sitting it; Indian media counted [89 leaks in a decade](https://newslaundry.com/2024/07/31/10-years-89-paper-leak-cases-48-retests-from-centre-to-states-few-plugs-for-a-leaky-record). In Vietnam, exam officials in three provinces [altered 2018 results](https://tienphong.vn/toan-canh-vu-gian-lan-diem-thi-thpt-quoc-gia-2018-gay-chan-dong-be-boi-bi-phanh-phui-post1857592.tpo) from inside the system. Going digital only hands the master key to a database admin or cloud vendor.
 
 ### 3. Value & impact
 Around one million candidates sit Vietnam's national graduation exam each year. SealedExam cuts the cost of physical custody, protects honest staff from suspicion and makes computer-based exams credible. In-room cheating still needs room controls.
@@ -19,7 +19,7 @@ Around one million candidates sit Vietnam's national graduation exam each year. 
 Questions are encrypted in the setter's browser; the Tide network releases decryption only to the exam-releaser role, so our server never can. Setters can seal but never reopen. Granting that role is a TideCloak change request that council members must sign; with our three-member council that is two of three. With ordinary login, whoever controls the database could open the paper.
 
 ### 5. Prototype & storytelling
-Look for: the operator sees only ciphertext; an official's self-grant stays at "1 of 2", decryption refused; at the bell, two council signatures let the proctor open the paper, all on the audit trail. Tide's licensing service failed on our realm, so this build simulates TideCloak sign-in, roles, quorum and network checks; our server checks are unchanged and tested end to end.
+Look for: the operator sees only ciphertext; an official's self-grant stays at "1 of 2", decryption refused; at the bell, two council signatures let the proctor open the paper, all on the audit trail. Tide's licensing service failed on our realm, so this build simulates TideCloak sign-in, roles, quorum and network checks; our server checks run unchanged.
 
 ---
 
