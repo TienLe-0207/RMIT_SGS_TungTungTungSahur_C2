@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useMe } from "@/lib/client/hooks";
 import { persona } from "@/lib/client/persona";
+import { SIMULATED } from "@/lib/tide/mode";
 import { Badge, Button, PersonaChip } from "./ui";
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -36,6 +37,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Link href="/" className="brand">
           <span className="seal-mark">✦</span> SealedExam
         </Link>
+        {SIMULATED && <span className="sim-flag" title="TideCloak sign-in, roles, quorum and network checks are simulated in this prototype">Simulated TideCloak</span>}
         <nav className="nav">
           {links.map((l) => (
             <Link key={l.href} href={l.href} className={path === l.href ? "active" : ""}>

@@ -7,6 +7,11 @@ const VIEW_AUDIT_WINDOW_MS = 5 * 60 * 1000;
 
 // The operator view: exactly what the platform stores, unfiltered.
 export const GET = withAccess((jwt) => isOperator(jwt) || isCouncil(jwt), async (_req, jwt) => {
-  updateStore((s) => audit(s, actorName(jwt), "operator_viewed", "Opened the raw vault"));
+  const actor = actorName(jwt);
+  updateStore((s) => {
+    const since = Date.now() - VIEW_AUDIT_WINDOW_MS;
+    const recent = s.audit.some((e) => e.action === "operator_viewed" && e.actor === actor && Date.parse(e.ts) > since);
+    if (!recent) audit(s, actor, "operator_viewed", "Opened the raw vault");
+  });
   return Response.json(readStore());
 });
