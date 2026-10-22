@@ -36,6 +36,9 @@ export interface ReleaseRequest {
   requesterUserId: string;
   createdAt: string;
   changeRequestIds: string[];
+  // Quorum progress as last seen by a council member's browser (client-reported). It lets the
+  // proctor, who cannot read TideCloak's change requests, see where the council is.
+  progress?: { authCount: number | null; threshold: number | null; committed: boolean; reportedBy: string; at: string };
 }
 
 export interface Store {

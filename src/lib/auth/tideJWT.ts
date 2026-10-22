@@ -43,14 +43,16 @@ export async function verifyTideJWT(token: string): Promise<JWTPayload> {
   return payload;
 }
 
+// Realm roles, plus client roles of only two clients: this app's own client and `realm-management`
+// (where `tide-realm-admin` lives, AP-G09). A same-named role on any other client does not count.
 export function hasRole(payload: JWTPayload, role: string): boolean {
   const realmRoles = (payload.realm_access as any)?.roles || [];
   if (realmRoles.includes(role)) return true;
 
   const resourceAccess = payload.resource_access as any;
   if (resourceAccess) {
-    for (const client of Object.values(resourceAccess)) {
-      if ((client as any)?.roles?.includes(role)) return true;
+    for (const clientId of [getConfig().config.resource, "realm-management"]) {
+      if (resourceAccess[clientId]?.roles?.includes(role)) return true;
     }
   }
   return false;

@@ -30,20 +30,33 @@ export const POST = withRole("proctor", async (_req, jwt) => {
   return Response.json({ request });
 });
 
-// A council member links the TideCloak change request they filed to the release request.
+// A council member links the TideCloak change request they filed to the release request, or
+// reports the quorum progress their browser read from TideCloak (optional `progress`).
 export const PATCH = withAuth(async (req, jwt) => {
   if (!isCouncil(jwt)) return Response.json({ error: "Forbidden" }, { status: 403 });
   const body = await req.json().catch(() => null);
-  const { id, changeRequestId } = body ?? {};
+  const { id, changeRequestId, progress } = body ?? {};
   if (typeof id !== "string" || typeof changeRequestId !== "string") {
-    return Response.json({ error: "Expected { id, changeRequestId }" }, { status: 400 });
+    return Response.json({ error: "Expected { id, changeRequestId, progress? }" }, { status: 400 });
   }
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
   const actor = actorName(jwt);
   const ok = updateStore((s) => {
     const r = s.releaseRequests.find((x) => x.id === id);
     if (!r) return false;
-    if (!r.changeRequestIds.includes(changeRequestId)) r.changeRequestIds.push(changeRequestId);
-    audit(s, actor, "role_grant_filed", `Filed TideCloak change request ${changeRequestId.slice(0, 8)} granting exam-releaser to ${r.requester}`);
+    if (!r.changeRequestIds.includes(changeRequestId)) {
+      r.changeRequestIds.push(changeRequestId);
+      audit(s, actor, "role_grant_filed", `Filed TideCloak change request ${changeRequestId.slice(0, 8)} granting exam-releaser to ${r.requester}`);
+    }
+    if (progress && typeof progress === "object") {
+      r.progress = {
+        authCount: num(progress.authCount),
+        threshold: num(progress.threshold),
+        committed: progress.committed === true,
+        reportedBy: actor,
+        at: new Date().toISOString(),
+      };
+    }
     return true;
   });
   return ok ? Response.json({ ok }) : Response.json({ error: "Not found" }, { status: 404 });

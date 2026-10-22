@@ -35,13 +35,38 @@ async function json<T>(res: Response): Promise<T> {
   return (text ? JSON.parse(text) : null) as T;
 }
 
+// A browser call to another origin that fails before any response is almost always CORS: the
+// app's origin is missing from the client's Web Origins in TideCloak. Say so instead of "Failed to fetch".
+async function call(sf: SecureFetch, url: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await sf(url, init);
+  } catch (err) {
+    if (err instanceof TypeError) {
+      throw new Error(
+        `Could not reach TideCloak from the browser (${err.message}). Check that ${window.location.origin} is in the client's Web Origins.`
+      );
+    }
+    throw err;
+  }
+}
+
 export async function listChangeRequests(sf: SecureFetch, status = "PENDING"): Promise<ChangeRequest[]> {
-  const out = await json<ChangeRequest[]>(await sf(`${base()}/iga/change-requests?status=${status}`));
+  const out = await json<ChangeRequest[]>(await call(sf, `${base()}/iga/change-requests?status=${status}`));
   return Array.isArray(out) ? out : [];
 }
 
 async function realmRole(sf: SecureFetch, name: string) {
-  return json<any>(await sf(`${base()}/roles/${encodeURIComponent(name)}`));
+  return json<any>(await call(sf, `${base()}/roles/${encodeURIComponent(name)}`));
+}
+
+/** A user's username, for labelling change requests. Falls back to the id. */
+export async function userName(sf: SecureFetch, userId: string): Promise<string> {
+  try {
+    const u = await json<any>(await call(sf, `${base()}/users/${userId}`));
+    return String(u?.username ?? userId);
+  } catch {
+    return userId;
+  }
 }
 
 /**
@@ -49,9 +74,21 @@ async function realmRole(sf: SecureFetch, name: string) {
  * it returns 202 and files a change request that needs the council quorum.
  */
 export async function requestReleaseGrant(sf: SecureFetch, userId: string): Promise<{ status: number; changeRequestId: string | null }> {
+  return changeReleaseRoles(sf, userId, "POST", "GRANT_ROLES");
+}
+
+/**
+ * Ask TideCloak to take the release roles away again (to reset the demo). Also a change request
+ * that needs the council quorum.
+ */
+export async function requestReleaseRevoke(sf: SecureFetch, userId: string): Promise<{ status: number; changeRequestId: string | null }> {
+  return changeReleaseRoles(sf, userId, "DELETE", "REVOKE_ROLES");
+}
+
+async function changeReleaseRoles(sf: SecureFetch, userId: string, method: "POST" | "DELETE", actionType: string) {
   const roles = await Promise.all([realmRole(sf, "exam-releaser"), realmRole(sf, "_tide_decryptor")]);
-  const res = await sf(`${base()}/users/${userId}/role-mappings/realm`, {
-    method: "POST",
+  const res = await call(sf, `${base()}/users/${userId}/role-mappings/realm`, {
+    method,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(roles),
   });
@@ -59,9 +96,11 @@ export async function requestReleaseGrant(sf: SecureFetch, userId: string): Prom
   const loc = res.headers.get("Location");
   let changeRequestId = loc ? loc.split("/").pop() ?? null : null;
   if (!changeRequestId) {
-    // Location may not be exposed over CORS: find the newest pending grant for this user.
-    const pending = await listChangeRequests(sf);
-    const mine = pending.filter((c) => c.actionType === "GRANT_ROLES" && JSON.stringify(c).includes(userId));
+    // Location may not be exposed over CORS: find the newest pending request for this user.
+    // The revoke action name is not verified, so fall back to any pending request for the user.
+    const forUser = (await listChangeRequests(sf)).filter((c) => JSON.stringify(c).includes(userId));
+    const exact = forUser.filter((c) => c.actionType === actionType);
+    const mine = exact.length ? exact : forUser;
     changeRequestId = mine.length ? mine[mine.length - 1].id : null;
   }
   return { status: res.status, changeRequestId };
@@ -95,7 +134,7 @@ export async function approveChangeRequest(
 ): Promise<ApproveResult> {
   const url = `${base()}/iga/change-requests/${id}/approve`;
   const post = (body: object) =>
-    sf(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    call(sf, url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 
   const first = await json<any>(await post({}));
   if (first?.mode !== "needs-approval") return first;
@@ -108,7 +147,7 @@ export async function approveChangeRequest(
 }
 
 export async function denyChangeRequest(sf: SecureFetch, id: string, reason: string) {
-  const res = await sf(`${base()}/iga/change-requests/${id}/deny`, {
+  const res = await call(sf, `${base()}/iga/change-requests/${id}/deny`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ reason }),
@@ -118,7 +157,7 @@ export async function denyChangeRequest(sf: SecureFetch, id: string, reason: str
 
 /** The realm's signed admin policy: authorises a council member to sign the paper policies. */
 export async function fetchAdminPolicy(sf: SecureFetch): Promise<Uint8Array> {
-  const out = await json<any>(await sf(`${base()}/iga/role-policies/name/tide-realm-admin`));
+  const out = await json<any>(await call(sf, `${base()}/iga/role-policies/name/tide-realm-admin`));
   if (!out?.policy) throw new Error("No tide-realm-admin policy found on the realm");
   return b64ToBytes(out.policy);
 }
