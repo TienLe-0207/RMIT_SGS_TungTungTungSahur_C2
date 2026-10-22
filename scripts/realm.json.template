@@ -11,6 +11,10 @@
       { "name": "_tide_enabled", "description": "Represents a tide user thats allowed perform actions on tide" },
       { "name": "_tide_encryptor", "description": "RelationshipAttestation:1: may encrypt records a policy grants to this user (name fixed by the ORK contract). Capability only; the policy subject decides which records." },
       { "name": "_tide_decryptor", "description": "RelationshipAttestation:1: may decrypt records a policy grants to this user (name fixed by the ORK contract). Capability only; the policy subject decides which records." },
+      { "name": "exam-setter", "description": "SealedExam: may seal (encrypt) questions into the paper" },
+      { "name": "exam-releaser", "description": "SealedExam: may open the sealed paper. Granted only by council quorum" },
+      { "name": "proctor", "description": "SealedExam: exam-room proctor" },
+      { "name": "it-operator", "description": "SealedExam: platform operator, sees raw stored data only" },
       {
         "name": "default-roles-REALM_NAME",
         "description": "${role_default-roles}",
