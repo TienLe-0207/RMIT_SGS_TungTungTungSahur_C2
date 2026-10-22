@@ -1,6 +1,8 @@
 [![Built with TideCloak](https://tide.org/badges/built-with-tidecloak.svg)](https://tide.org/tidecloak?utm_source=github&utm_medium=readme&utm_campaign=unlocked)
 
-*English: [README.md](README.md)*
+*English: [README.md](../README.md)*
+
+> **Lưu ý:** bản dịch này viết trước khi chuyển sang **TideCloak giả lập** (theo hướng dẫn của ban tổ chức, khi bước cấp licence của Tide bị lỗi). Cách chạy hiện tại và phần giới hạn xem ở [README.md](../README.md): `npm install`, `npm run sim:init`, `npm run dev`.
 
 ## Tổng quan dự án
 
@@ -51,11 +53,11 @@ flowchart LR
 ### Thành phần
 | Thành phần | Ở đâu | Vai trò |
 |---|---|---|
-| Dựng realm | [`scripts/init-tidecloak.sh`](scripts/init-tidecloak.sh), [`scripts/realm.json.template`](scripts/realm.json.template) | Khởi động TideCloak, cấp licence cho realm, bật IGA, tạo role và sáu persona, đặt Minh, Hoa, Tuấn làm hội đồng (`tide-realm-admin`), xuất `data/tidecloak.json` |
-| API | [`src/app/api/`](src/app/api) | Các route handler. Route nào cũng kiểm JWT, DPoP proof và role của người gọi ở server |
-| Xác thực | [`src/lib/auth/`](src/lib/auth) | Kiểm token và DPoP (lấy từ template của Tide), kiểm role theo đúng không gian tên: role của app là realm role, hội đồng là `tide-realm-admin` chỉ trên `realm-management` |
-| Lưu trữ | [`src/lib/store.ts`](src/lib/store.ts) | Một file JSON, để ai cũng có thể `cat data/store.json` và thấy trong đó không có plaintext hay khoá |
-| Hàm Tide (trình duyệt) | [`src/lib/tide/`](src/lib/tide) | `sealQuestions` / `openQuestions` qua `RelationshipAttestation:1`; `requestReleaseGrant` và `approveChangeRequest` (duyệt hai pha qua enclave) |
+| Dựng realm | [`scripts/init-tidecloak.sh`](../scripts/init-tidecloak.sh), [`scripts/realm.json.template`](../scripts/realm.json.template) | Khởi động TideCloak, cấp licence cho realm, bật IGA, tạo role và sáu persona, đặt Minh, Hoa, Tuấn làm hội đồng (`tide-realm-admin`), xuất `data/tidecloak.json` |
+| API | [`src/app/api/`](../src/app/api) | Các route handler. Route nào cũng kiểm JWT, DPoP proof và role của người gọi ở server |
+| Xác thực | [`src/lib/auth/`](../src/lib/auth) | Kiểm token và DPoP (lấy từ template của Tide), kiểm role theo đúng không gian tên: role của app là realm role, hội đồng là `tide-realm-admin` chỉ trên `realm-management` |
+| Lưu trữ | [`src/lib/store.ts`](../src/lib/store.ts) | Một file JSON, để ai cũng có thể `cat data/store.json` và thấy trong đó không có plaintext hay khoá |
+| Hàm Tide (trình duyệt) | [`src/lib/tide/`](../src/lib/tide) | `sealQuestions` / `openQuestions` qua `RelationshipAttestation:1`; `requestReleaseGrant` và `approveChangeRequest` (duyệt hai pha qua enclave) |
 
 ### Role và hai policy của đề
 | Persona (giả) | Trước giờ thi | Sau quorum |
@@ -113,7 +115,7 @@ Trường hợp quan chức tự cấp quyền đi đúng đường này: Minh t
 - Sau khi mở vào giờ thi, đề vẫn có thể bị chụp ảnh. Vẫn cần kiểm soát trong phòng thi.
 - Server không tự đọc được change request của TideCloak (nó không giữ credential admin). Các lượt duyệt nó ghi là do trình duyệt của thành viên hội đồng chuyển lên, được gắn nhãn `client-reported`. Bằng chứng quyết định là token do TideCloak ký của chính giám thị.
 - Server vẫn có thể xoá hoặc tráo ciphertext. Nó không đọc được đề, nhưng làm hỏng được tính toàn vẹn và tính sẵn sàng.
-- Chưa kiểm trên realm thật: master admin của Keycloak có vượt được IGA không. [`scripts/check-master-admin-bypass.sh`](scripts/check-master-admin-bypass.sh) dùng để trả lời câu này.
+- Chưa kiểm trên realm thật: master admin của Keycloak có vượt được IGA không. [`scripts/check-master-admin-bypass.sh`](../scripts/check-master-admin-bypass.sh) dùng để trả lời câu này.
 
 ---
 
