@@ -1,41 +1,46 @@
-# Quy ước làm việc
+# Contributing
 
-## Nhánh và pull request
+## Branches and pull requests
 
-- Không commit thẳng vào `main`.
-- Mỗi việc một nhánh, đặt tên `<tên>/<việc>`: `uyen/logistic-regression`, `tien/random-forest`.
-- Mở pull request, người còn lại review rồi mới merge.
+- Do not commit directly to `main`.
+- One branch per task, named `<type>/<task>` with the same types as commit messages: `feat/exam-api`, `fix/dpop-retry`, `docs/readme`.
+- Open a pull request; another team member reviews it before it is merged.
 
-## Commit message (tiếng Anh)
+## Commit messages (in English)
 
-Dạng `<type>: <mô tả ngắn, động từ nguyên mẫu, không chấm câu cuối>`
+Format: `<type>: <short description, imperative verb, no trailing full stop>`
 
-| Type | Dùng khi | Ví dụ |
+| Type | Use for | Example |
 |---|---|---|
-| `feat` | Thêm chức năng, mô hình | `feat: add Gaussian Naive Bayes classifier` |
-| `fix` | Sửa lỗi | `fix: handle zero division in macro F1` |
-| `exp` | Thí nghiệm, kết quả, biểu đồ | `exp: add learning rate sweep for MLP` |
-| `test` | Thêm/sửa test | `test: compare random forest against scikit-learn` |
-| `docs` | README, báo cáo, slide | `docs: fill in MNIST results table` |
-| `refactor` | Sửa code không đổi hành vi | `refactor: vectorize split search in decision tree` |
-| `chore` | Cấu hình, dọn dẹp | `chore: pin dependency versions` |
+| `feat` | New functionality | `feat: add exam API routes with server-side role checks` |
+| `fix` | Bug fixes | `fix: make TideCloak init script run on macOS` |
+| `test` | Adding or changing tests | `test: add auth, DPoP and route authorization tests` |
+| `docs` | README, guides, diagrams | `docs: add README with project overview, architecture and setup` |
+| `refactor` | Code changes that keep behaviour the same | `refactor: share role checks between API routes` |
+| `chore` | Configuration, dependencies, cleanup | `chore: scaffold Next.js app from TideCloak template` |
 
-Mỗi commit một thay đổi trọn vẹn; tránh `update`, `fix bug`, `final`.
+One complete change per commit; avoid messages like `update`, `fix bug`, `final`.
 
-## Trước khi commit
+## Before committing
 
 ```bash
-ruff format .      # định dạng code
-ruff check .       # kiểm tra lỗi và thứ tự import
-pytest             # chạy test
+npm test             # vitest: auth, DPoP, roles, routes, release flow
+npx tsc --noEmit     # type check (needs data/tidecloak.json from `npm run init`)
 ```
 
-## Không commit
+## Do not commit
 
-- Dữ liệu tải về (`data/`) và trọng số mô hình (`*.pt`, `*.npz`): đã có trong `.gitignore`.
-- Notebook chạy dở: chạy lại sạch từ đầu (Restart & Run All) trước khi commit.
+- `.env`: the TideCloak master-admin password and the Tide licence email.
+- `data/`: the local TideCloak database, `tidecloak.json`, invite links, `store.json`.
+- `.tide-pack/`, `node_modules/`, `.next/`.
 
-## README hai ngôn ngữ
+All of these are already in `.gitignore`. Check `git status` before every commit anyway.
 
-`README.md` (tiếng Anh) và `README.vi.md` (tiếng Việt) phải giống nhau về nội dung.
-Sửa bản nào thì sửa luôn bản kia trong cùng một commit.
+## Tide-provided files
+
+Do not edit the files that come from the Tide template, for example `public/tide_dpop_auth.html`, `public/silent-check-sso.html`, `src/app/providers.tsx` and `src/lib/auth/verifyDpop.ts`. Changing them breaks sign-in.
+
+## Bilingual README
+
+`README.md` (English) and `README.vi.md` (Vietnamese) must have the same content.
+Whenever you edit one, update the other in the same commit.
