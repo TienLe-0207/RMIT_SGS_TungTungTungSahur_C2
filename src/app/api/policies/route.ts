@@ -1,11 +1,11 @@
-import { withRole } from "@/lib/auth/protect";
-import { actorName } from "@/lib/auth/actor";
+import { withAccess } from "@/lib/auth/protect";
+import { actorName, isCouncil } from "@/lib/auth/actor";
 import { audit, updateStore } from "@/lib/store";
 
 // Store the two network-signed RelationshipAttestation policies for the paper.
 // Council only. The bytes are useless without the network's signature, but an open route would
 // let anyone overwrite a good policy with junk and lock the paper (AP-RA08).
-export const POST = withRole("tide-realm-admin", async (req, jwt) => {
+export const POST = withAccess(isCouncil, async (req, jwt) => {
   const body = await req.json().catch(() => null);
   const kind = body?.kind;
   const policy = body?.policy;

@@ -6,15 +6,15 @@ import { useEffect, useState } from "react";
 // Playbook: add-rbac-nextjs
 // hasRealmRole() is UI gating only. The API enforces the real check.
 export default function DashboardPage() {
-  const { hasRealmRole, token } = useTideCloak();
+  const { hasRealmRole, token, secureFetch } = useTideCloak();
   const [customers, setCustomers] = useState<any[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) return;
-    fetch("/api/customers", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    // secureFetch attaches `Authorization: DPoP <token>` and a fresh DPoP proof. A plain Bearer
+    // header is rejected by the API, which is the point of sender-constrained tokens.
+    secureFetch("/api/customers")
       .then((res) => {
         if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
         return res.json();

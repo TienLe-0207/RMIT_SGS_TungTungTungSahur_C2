@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
-import { join } from "path";
+import { dirname, join } from "path";
 import { randomUUID } from "crypto";
 
 // Everything the SealedExam server holds. There is no plaintext and no key in here:
@@ -28,6 +28,12 @@ export interface QuestionItem {
   status: "sealed";
 }
 
+export interface ReportedApproval {
+  username: string;
+  timestamp: string | number;
+  reportedBy: string;
+}
+
 export interface ReleaseRequest {
   id: string;
   paperId: string;
@@ -36,6 +42,13 @@ export interface ReleaseRequest {
   requesterUserId: string;
   createdAt: string;
   changeRequestIds: string[];
+  // Relayed from TideCloak by a council member's browser. The server holds no TideCloak admin
+  // credential, so it cannot re-read these: they are client-reported.
+  approvals?: ReportedApproval[];
+  threshold?: number | null;
+  changeRequestStatus?: string | null;
+  // Set only from a TideCloak-signed access token that carries the release roles.
+  grantConfirmedAt?: string | null;
 }
 
 export interface Store {
@@ -56,7 +69,8 @@ export interface Store {
   audit: AuditEvent[];
 }
 
-const STORE_PATH = join(process.cwd(), "data", "store.json");
+// SEALEDEXAM_STORE_PATH lets tests point at a scratch file instead of the real store.
+const storePath = () => process.env.SEALEDEXAM_STORE_PATH ?? join(process.cwd(), "data", "store.json");
 
 function empty(): Store {
   return {
@@ -74,15 +88,17 @@ function empty(): Store {
 }
 
 export function readStore(): Store {
-  if (!existsSync(STORE_PATH)) return empty();
-  return JSON.parse(readFileSync(STORE_PATH, "utf-8"));
+  const path = storePath();
+  if (!existsSync(path)) return empty();
+  return JSON.parse(readFileSync(path, "utf-8"));
 }
 
 export function updateStore<T>(fn: (s: Store) => T): T {
   const s = readStore();
   const out = fn(s);
-  mkdirSync(join(process.cwd(), "data"), { recursive: true });
-  writeFileSync(STORE_PATH, JSON.stringify(s, null, 2));
+  const path = storePath();
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, JSON.stringify(s, null, 2));
   return out;
 }
 
