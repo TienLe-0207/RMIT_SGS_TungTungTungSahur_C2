@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { verifyTideJWT, hasRole, extractToken } from "./tideJWT";
+import { verifyTideJWT, hasRealmRole, extractToken } from "./tideJWT";
 import { verifyDpop } from "./verifyDpop";
 import type { JWTPayload } from "jose";
 
@@ -26,11 +26,18 @@ export function withAuth(handler: AuthHandler) {
   };
 }
 
-export function withRole(role: string, handler: AuthHandler) {
+// Authorization on top of withAuth: 403 unless `allowed` holds for the verified token.
+export function withAccess(allowed: (jwt: JWTPayload) => boolean, handler: AuthHandler) {
   return withAuth(async (req, jwt) => {
-    if (!hasRole(jwt, role)) {
+    if (!allowed(jwt)) {
       return Response.json({ error: "Forbidden" }, { status: 403 });
     }
     return handler(req, jwt);
   });
+}
+
+// App roles (exam-setter, proctor, ...) are realm roles. Client roles go through withAccess with an
+// explicit client, e.g. isCouncil.
+export function withRealmRole(role: string, handler: AuthHandler) {
+  return withAccess((jwt) => hasRealmRole(jwt, role), handler);
 }

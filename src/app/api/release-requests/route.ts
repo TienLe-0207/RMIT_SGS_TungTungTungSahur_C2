@@ -1,4 +1,4 @@
-import { withAuth, withRole } from "@/lib/auth/protect";
+import { withAccess, withAuth, withRealmRole } from "@/lib/auth/protect";
 import { actorName, isCouncil } from "@/lib/auth/actor";
 import { audit, newId, readStore, updateStore } from "@/lib/store";
 
@@ -7,7 +7,7 @@ export const GET = withAuth(async () => {
 });
 
 // The proctor asks the council to open the paper. App-level rule: only after the (mock) bell.
-export const POST = withRole("proctor", async (_req, jwt) => {
+export const POST = withRealmRole("proctor", async (_req, jwt) => {
   const actor = actorName(jwt);
   const s = readStore();
   if (!s.paper.bellRungAt) {
@@ -31,8 +31,7 @@ export const POST = withRole("proctor", async (_req, jwt) => {
 });
 
 // A council member links the TideCloak change request they filed to the release request.
-export const PATCH = withAuth(async (req, jwt) => {
-  if (!isCouncil(jwt)) return Response.json({ error: "Forbidden" }, { status: 403 });
+export const PATCH = withAccess(isCouncil, async (req, jwt) => {
   const body = await req.json().catch(() => null);
   const { id, changeRequestId } = body ?? {};
   if (typeof id !== "string" || typeof changeRequestId !== "string") {
