@@ -2,6 +2,9 @@ import path from "path";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Keep README.md the only Markdown file: `next dev` would otherwise write AGENTS.md.
+  agentRules: false,
+
   // Next.js 16+ defaults to Turbopack. Use `next dev --webpack` (in package.json)
   // because @tidecloak/* packages need the webpack workarounds below.
   webpack: (config) => {
