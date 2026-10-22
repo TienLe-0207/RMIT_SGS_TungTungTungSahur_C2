@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
-import { join } from "path";
+import { dirname, join } from "path";
 import { randomUUID } from "crypto";
 
 // Everything the SealedExam server holds. There is no plaintext and no key in here:
@@ -56,7 +56,8 @@ export interface Store {
   audit: AuditEvent[];
 }
 
-const STORE_PATH = join(process.cwd(), "data", "store.json");
+// SEALEDEXAM_STORE_PATH lets tests point at a scratch file instead of the real store.
+const storePath = () => process.env.SEALEDEXAM_STORE_PATH ?? join(process.cwd(), "data", "store.json");
 
 function empty(): Store {
   return {
@@ -74,15 +75,17 @@ function empty(): Store {
 }
 
 export function readStore(): Store {
-  if (!existsSync(STORE_PATH)) return empty();
-  return JSON.parse(readFileSync(STORE_PATH, "utf-8"));
+  const path = storePath();
+  if (!existsSync(path)) return empty();
+  return JSON.parse(readFileSync(path, "utf-8"));
 }
 
 export function updateStore<T>(fn: (s: Store) => T): T {
   const s = readStore();
   const out = fn(s);
-  mkdirSync(join(process.cwd(), "data"), { recursive: true });
-  writeFileSync(STORE_PATH, JSON.stringify(s, null, 2));
+  const path = storePath();
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, JSON.stringify(s, null, 2));
   return out;
 }
 
