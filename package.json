@@ -9,6 +9,7 @@
     "init": "bash scripts/init-tidecloak.sh",
     "reset": "node scripts/reset-demo.mjs",
     "sim:init": "node scripts/sim-init.mjs",
+    "e2e:sim": "node scripts/e2e-sim.mjs",
     "test": "vitest run"
   },
   "dependencies": {

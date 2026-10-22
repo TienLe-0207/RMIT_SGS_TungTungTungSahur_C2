@@ -2,6 +2,20 @@
 
 Hướng dẫn này dùng khi chạy lại từ đầu, ví dụ khi chuyển sang máy khác vì máy cũ hết RAM.
 
+## Cách nhanh: TideCloak giả lập (mặc định)
+
+Không cần Docker, không cần licence Tide. Đăng nhập, role, quorum của council và các kiểm tra của mạng Tide
+đều do `/sim-tide` giả lập. Các API của app vẫn kiểm JWT, role và DPoP y như khi chạy thật.
+
+```bash
+npm install
+npm run sim:init     # tạo realm giả lập + 6 persona, xoá dữ liệu demo cũ
+npm run dev          # http://localhost:3000, rồi bấm "Sign in with Tide" để chọn persona
+npm run e2e:sim      # (terminal khác) chạy cả kịch bản F1–F9 qua HTTP; chạy lại sim:init trước mỗi lần
+```
+
+Muốn dùng TideCloak thật thì đặt `NEXT_PUBLIC_TIDE_MODE=live` và làm theo các bước dưới.
+
 ## 0. Yêu cầu máy
 
 | Thứ | Ghi chú |
