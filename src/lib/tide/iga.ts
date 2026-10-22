@@ -4,6 +4,7 @@
 // Never proxied through the app server: TideCloak credits each approval to whoever made the HTTP
 // call, so a proxy would record every human signature under one service identity (AP-89).
 import tcConfig from "../../../data/tidecloak.json";
+import { Models } from "@tideorg/js";
 
 type SecureFetch = (url: string, init?: RequestInit) => Promise<Response>;
 type ApproveTideRequests = (
@@ -92,6 +93,13 @@ async function changeReleaseRoles(sf: SecureFetch, userId: string, method: "POST
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(roles),
   });
+  if (res.status === 409) {
+    // PENDING_CHANGE_REQUEST_CONFLICT: this user already has a pending change request. Reuse it
+    // instead of failing, so a retried click does not strand the release.
+    const body = await res.json().catch(() => ({}));
+    if (body?.conflictingChangeRequestId) return { status: 409, changeRequestId: String(body.conflictingChangeRequestId) };
+    throw new Error(`TideCloak 409: ${JSON.stringify(body).slice(0, 300)}`);
+  }
   if (res.status !== 202 && !res.ok) throw new Error(`TideCloak ${res.status}: ${(await res.text()).slice(0, 300)}`);
   const loc = res.headers.get("Location");
   let changeRequestId = loc ? loc.split("/").pop() ?? null : null;
@@ -112,6 +120,16 @@ const bytesToB64 = (b: Uint8Array) => {
   for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
   return btoa(s);
 };
+
+// The enclave correlates by the Tide request's own unique id (relationship.ts does the same).
+// Fall back to the change-request id if the model does not decode as a Tide request.
+function enclaveRequestId(request: Uint8Array, fallback: string): string {
+  try {
+    return Models.BaseTideRequest.decode(request).getUniqueId();
+  } catch {
+    return fallback;
+  }
+}
 
 export interface ApproveResult {
   mode: string;
@@ -139,7 +157,8 @@ export async function approveChangeRequest(
   const first = await json<any>(await post({}));
   if (first?.mode !== "needs-approval") return first;
 
-  const [signed] = await approveTideRequests([{ id, request: b64ToBytes(first.requestModel) }]);
+  const request = b64ToBytes(first.requestModel);
+  const [signed] = await approveTideRequests([{ id: enclaveRequestId(request, id), request }]);
   if (!signed?.approved?.request) {
     throw new Error(signed?.denied ? "You declined in the Tide enclave" : "The Tide enclave returned no signature");
   }

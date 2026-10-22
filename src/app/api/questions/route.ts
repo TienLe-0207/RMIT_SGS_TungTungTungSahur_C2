@@ -1,9 +1,9 @@
-import { withRole } from "@/lib/auth/protect";
+import { withRealmRole } from "@/lib/auth/protect";
 import { actorName } from "@/lib/auth/actor";
 import { audit, newId, updateStore, PAPER_ID } from "@/lib/store";
 
 // Setters hand in ciphertext only. The server cannot check what is inside, and does not try.
-export const POST = withRole("exam-setter", async (req, jwt) => {
+export const POST = withRealmRole("exam-setter", async (req, jwt) => {
   const body = await req.json().catch(() => null);
   const items: unknown = body?.ciphertexts;
   if (!Array.isArray(items) || items.length === 0 || items.length > 50 || !items.every((c) => typeof c === "string" && c.length > 0)) {

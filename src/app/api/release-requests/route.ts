@@ -1,13 +1,14 @@
-import { withAuth, withRole } from "@/lib/auth/protect";
+import { withAccess, withAuth, withRealmRole } from "@/lib/auth/protect";
 import { actorName, isCouncil } from "@/lib/auth/actor";
 import { audit, newId, readStore, updateStore } from "@/lib/store";
+import { CHANGE_REQUEST_ID, MAX_LINKED_CHANGE_REQUESTS, checkChangeRequestSnapshot } from "@/lib/release";
 
 export const GET = withAuth(async () => {
   return Response.json({ releaseRequests: readStore().releaseRequests });
 });
 
 // The proctor asks the council to open the paper. App-level rule: only after the (mock) bell.
-export const POST = withRole("proctor", async (_req, jwt) => {
+export const POST = withRealmRole("proctor", async (_req, jwt) => {
   const actor = actorName(jwt);
   const s = readStore();
   if (!s.paper.bellRungAt) {
@@ -22,6 +23,10 @@ export const POST = withRole("proctor", async (_req, jwt) => {
       requesterUserId: String(jwt.sub),
       createdAt: new Date().toISOString(),
       changeRequestIds: [] as string[],
+      approvals: [],
+      threshold: null,
+      changeRequestStatus: null,
+      grantConfirmedAt: null,
     };
     st.releaseRequests.push(r);
     audit(st, actor, "release_requested", `Asked the council to release ${st.paper.id} to ${actor}`);
@@ -30,34 +35,46 @@ export const POST = withRole("proctor", async (_req, jwt) => {
   return Response.json({ request });
 });
 
-// A council member links the TideCloak change request they filed to the release request, or
-// reports the quorum progress their browser read from TideCloak (optional `progress`).
-export const PATCH = withAuth(async (req, jwt) => {
-  if (!isCouncil(jwt)) return Response.json({ error: "Forbidden" }, { status: 403 });
+// A council member links the TideCloak change request they filed to the release request, and may
+// relay the request as their browser read it from TideCloak (status, threshold, authorizers[]).
+// All of it is client-reported: see src/lib/release.ts for what is checked and why.
+export const PATCH = withAccess(isCouncil, async (req, jwt) => {
   const body = await req.json().catch(() => null);
-  const { id, changeRequestId, progress } = body ?? {};
-  if (typeof id !== "string" || typeof changeRequestId !== "string") {
-    return Response.json({ error: "Expected { id, changeRequestId, progress? }" }, { status: 400 });
+  const { id, changeRequestId, changeRequest } = body ?? {};
+  if (typeof id !== "string" || typeof changeRequestId !== "string" || !CHANGE_REQUEST_ID.test(changeRequestId)) {
+    return Response.json({ error: "Expected { id, changeRequestId, changeRequest? }" }, { status: 400 });
   }
   const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
   const actor = actorName(jwt);
-  const ok = updateStore((s) => {
+  const result = updateStore((s): { status: number; error?: string } => {
     const r = s.releaseRequests.find((x) => x.id === id);
-    if (!r) return false;
-    if (!r.changeRequestIds.includes(changeRequestId)) {
+    if (!r) return { status: 404, error: "Not found" };
+
+    const isNew = !r.changeRequestIds.includes(changeRequestId);
+    if (isNew && r.changeRequestIds.length >= MAX_LINKED_CHANGE_REQUESTS) {
+      return { status: 409, error: "Too many change requests linked to this release request" };
+    }
+    const check = changeRequest === undefined ? null : checkChangeRequestSnapshot(changeRequest, changeRequestId, r);
+    if (check && !check.ok) return { status: 422, error: check.error };
+
+    const cr = changeRequestId.slice(0, 8);
+    if (isNew) {
       r.changeRequestIds.push(changeRequestId);
-      audit(s, actor, "role_grant_filed", `Filed TideCloak change request ${changeRequestId.slice(0, 8)} granting exam-releaser to ${r.requester}`);
+      audit(s, actor, "role_grant_filed", `Reported TideCloak change request ${cr} granting exam-releaser to ${r.requester}`, "client-reported");
     }
-    if (progress && typeof progress === "object") {
-      r.progress = {
-        authCount: num(progress.authCount),
-        threshold: num(progress.threshold),
-        committed: progress.committed === true,
-        reportedBy: actor,
-        at: new Date().toISOString(),
-      };
+    if (check?.ok) {
+      const approvals = (r.approvals ??= []);
+      for (const a of check.snapshot.authorizers) {
+        if (approvals.some((x) => x.username === a.username)) continue;
+        approvals.push({ ...a, reportedBy: actor });
+        audit(s, a.username, "approval_recorded", `Approved change request ${cr} (per TideCloak authorizers, relayed by ${actor})`, "client-reported");
+      }
+      r.threshold = check.snapshot.threshold;
+      r.changeRequestStatus = check.snapshot.status;
     }
-    return true;
+    return { status: 200 };
   });
-  return ok ? Response.json({ ok }) : Response.json({ error: "Not found" }, { status: 404 });
+  return result.status === 200
+    ? Response.json({ ok: true })
+    : Response.json({ error: result.error }, { status: result.status });
 });

@@ -8,6 +8,7 @@
     "start": "next start",
     "init": "bash scripts/init-tidecloak.sh",
     "reset": "node scripts/reset-demo.mjs"
+    "test": "vitest run"
   },
   "dependencies": {
     "@tidecloak/nextjs": "0.14.17",
@@ -19,6 +20,7 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^3.2.4"
   }
 }
